@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <link
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+  />
+  <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          rel="stylesheet"
+  />
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#375DFB",
+            "background-light": "#f5f6f8",
+            "background-dark": "#0f1323",
+            "kakao": "#FEE500",
+            "kakao-text": "#191919",
+            "google": "#FFFFFF",
+            "apple": "#000000",
+            "background": "#f5f7fa",
+            "error": "#b41340",
+            "tertiary-dim": "#832c75",
+            "on-background": "#2c2f32",
+            "secondary": "#524eb6",
+            "primary-fixed": "#869aff",
+            "on-primary-fixed": "#000000",
+            "primary-fixed-dim": "#738bff",
+            "on-tertiary-fixed-variant": "#701963",
+            "inverse-on-surface": "#9a9da0",
+            "inverse-surface": "#0b0f11",
+            "tertiary-fixed": "#fe95e5",
+            "on-tertiary-container": "#650d5a",
+            "secondary-fixed": "#d0cdff",
+            "on-secondary-fixed": "#29218d",
+            "on-primary": "#f2f1ff",
+            "on-error-container": "#510017",
+            "primary-container": "#869aff",
+            "surface-dim": "#d0d5d9",
+            "surface-container-highest": "#d9dde1",
+            "surface-container-low": "#eef1f4",
+            "tertiary": "#923882",
+            "on-surface-variant": "#595c5e",
+            "surface-container": "#e5e8ec",
+            "surface-bright": "#f5f7fa",
+            "secondary-fixed-dim": "#c0bdff",
+            "outline-variant": "#abadb0",
+            "surface-container-high": "#dfe3e7",
+            "error-dim": "#a70138",
+            "primary-dim": "#003ad7",
+            "on-secondary-container": "#3d38a0",
+            "secondary-dim": "#4641a9",
+            "surface": "#f5f7fa",
+            "on-tertiary": "#ffeef6",
+            "on-secondary-fixed-variant": "#4742aa",
+            "on-primary-container": "#001769",
+            "on-primary-fixed-variant": "#001f80",
+            "error-container": "#f74b6d",
+            "inverse-primary": "#6f88ff",
+            "on-surface": "#2c2f32",
+            "on-error": "#ffefef",
+            "tertiary-fixed-dim": "#ee88d7",
+            "tertiary-container": "#fe95e5",
+            "secondary-container": "#d0cdff",
+            "surface-variant": "#d9dde1",
+            "surface-tint": "#1947e8",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary": "#f5f1ff",
+            "outline": "#74777a",
+            "on-tertiary-fixed": "#42003b"
+          },
+          borderRadius: {
+            DEFAULT: "1rem",
+            lg: "2rem",
+            xl: "3rem",
+            full: "9999px"
+          },
+          fontFamily: {
+            headline: ["Plus Jakarta Sans"],
+            body: ["Plus Jakarta Sans"],
+            label: ["Plus Jakarta Sans"]
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .bg-vibrant-gradient {
+      background: linear-gradient(135deg, #1947e8 0%, #869aff 100%);
+    }
+    .tonal-depth {
+      box-shadow: 0 12px 32px -4px rgba(25, 71, 232, 0.08);
+    }
+    .btn-gradient {
+      background: linear-gradient(135deg, #375DFB 0%, #5D7FFF 100%);
+    }
+
+    .korean-headline {
+      font-family: 'Noto Sans KR', sans-serif;
+      letter-spacing: -0.04em;
+      line-height: 1.2;
+    }
+    .brand-glass {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+  </style>
+
+  <title>Petitel</title>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
