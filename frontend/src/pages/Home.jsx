@@ -1,12 +1,27 @@
 import { useNavigate } from 'react-router-dom'
+
+function getTokenPayload() {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return null;
+    try {
+        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const json = decodeURIComponent(
+            atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+        );
+        return JSON.parse(json);
+    } catch {
+        return null;
+    }
+}
+
 export default function Home() {
 
     const showMessage = () => {
         alert('예약 페이지로 이동합니다.')
     }
 
-    // 회원가입 페이지
     const navigate = useNavigate()
+    const user = getTokenPayload()
 
     return (
         <div className="bg-slate-50 text-slate-800 antialiased">
@@ -42,17 +57,38 @@ export default function Home() {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button className="text-sm font-medium text-slate-600 transition-opacity hover:opacity-80"
-                                onClick={() => navigate('/signup')}
-                        >
-                            Sign Up
-                        </button>
-                        <button
-                            className="rounded-full px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all active:scale-95"
-                            style={{ background: "linear-gradient(135deg, #1947e8 0%, #869aff 100%)" }}
-                        >
-                            Join Now
-                        </button>
+                        {user ? (
+                            <>
+                                <span className="text-sm font-bold text-slate-700">
+                                    {user.name} 님
+                                </span>
+                                <button
+                                    className="rounded-full px-6 py-2.5 text-sm font-bold text-slate-600 border border-slate-200 transition-all hover:bg-slate-50 active:scale-95"
+                                    onClick={() => {
+                                        localStorage.removeItem('accessToken');
+                                        localStorage.setItem('kakao_force_login', 'true');
+                                        window.location.reload();
+                                    }}
+                                >
+                                    로그아웃
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <button className="text-sm font-medium text-slate-600 transition-opacity hover:opacity-80"
+                                        onClick={() => navigate('/signup')}
+                                >
+                                    Sign Up
+                                </button>
+                                <button
+                                    className="rounded-full px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                                    style={{ background: "linear-gradient(135deg, #1947e8 0%, #869aff 100%)" }}
+                                    onClick={() => navigate('/login')}
+                                >
+                                    Join Now
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             </nav>

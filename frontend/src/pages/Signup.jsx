@@ -475,6 +475,11 @@ export default function Signup() {
                                     aria-label="Sign up with Kakao"
                                     className="group flex h-14 items-center justify-center rounded-2xl bg-[#FEE500] transition-all hover:opacity-95"
                                     type="button"
+                                    onClick={() => {
+                                        const forceLogin = localStorage.getItem('kakao_force_login') === 'true';
+                                        localStorage.removeItem('kakao_force_login');
+                                        window.location.href = "http://localhost:8080/oauth2/authorization/kakao" + (forceLogin ? "?prompt_login=true" : "");
+                                    }}
                                 >
                                     <svg className="h-6 w-6 text-[#3C1E1E]" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M12 3c-5.523 0-10 3.582-10 8c0 2.872 1.848 5.378 4.595 6.911l-.947 3.473c-.092.337.28.614.56.43l4.1-2.704c.548.06 1.11.09 1.692.09 5.523 0 10-3.582 10-8s-4.477-8-10-8z"></path>
@@ -498,6 +503,7 @@ export default function Signup() {
                 </main>
             </div>
         </div>
+
 
             {modal && (
                 <TermsModal
