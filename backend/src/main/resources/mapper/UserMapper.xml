@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petitel.backend.user.repository.UserMapper">
+    <!-- 실제 SQL이 여기 있다. UserMapper.java의 메서드 이름(insert, existsByEmail...)과 아래 id가 매칭된다. -->
+
+    <!-- users 테이블 컬럼 -> User 엔티티 필드 매핑. SELECT * 결과를 User 객체로 조립할 때 사용. -->
+    <resultMap id="userResultMap" type="com.petitel.backend.user.domain.User">
+        <id property="id" column="id"/>
+        <result property="email" column="email"/>
+        <result property="password" column="password"/>
+        <result property="provider" column="provider"/>
+        <result property="providerId" column="provider_id"/>
+        <result property="name" column="name"/>
+        <result property="phone" column="phone"/>
+        <result property="phoneVerified" column="phone_verified"/>
+        <result property="termsAgreed" column="terms_agreed"/>
+        <result property="privacyAgreed" column="privacy_agreed"/>
+        <result property="marketingAgreed" column="marketing_agreed"/>
+        <result property="agreedAt" column="agreed_at"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="existsByEmail" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM users WHERE email = #{email}
+        )
+    </select>
+
+    <select id="existsByPhone" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM users WHERE phone = #{phone}
+        )
+    </select>
+
+    <insert id="insert" parameterType="com.petitel.backend.user.domain.User">
+        INSERT INTO users (
+            id, email, password, provider, provider_id,
+            name, phone, phone_verified,
+            terms_agreed, privacy_agreed, marketing_agreed, agreed_at,
+            status, created_at, updated_at
+        ) VALUES (
+            #{id}, #{email}, #{password}, #{provider}, #{providerId},
+            #{name}, #{phone}, #{phoneVerified},
+            #{termsAgreed}, #{privacyAgreed}, #{marketingAgreed}, #{agreedAt},
+            #{status}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <select id="findByProviderAndProviderId" resultMap="userResultMap">
+        SELECT *
+        FROM users
+        WHERE provider = #{provider}
+          AND provider_id = #{providerId}
+    </select>
+
+    <select id="findByEmail" resultMap="userResultMap">
+        SELECT *
+        FROM users
+        WHERE email = #{email}
+    </select>
+
+</mapper>

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { consumePostLoginRedirect } from "../utils/auth";
 
 export default function OAuthCallback() {
     const [searchParams] = useSearchParams();
@@ -9,7 +10,7 @@ export default function OAuthCallback() {
         const token = searchParams.get("token");
         if (token) {
             localStorage.setItem("accessToken", token);
-            navigate("/");
+            navigate(consumePostLoginRedirect() || "/");
         } else {
             navigate("/login");
         }

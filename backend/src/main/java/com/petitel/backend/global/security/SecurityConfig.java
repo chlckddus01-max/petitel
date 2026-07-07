@@ -11,6 +11,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import com.petitel.backend.global.security.oauth2.CustomOAuth2AuthorizationRequestResolver;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.web.SecurityFilterChain;
@@ -21,6 +23,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+// 보안 설정의 중심. 어떤 경로가 인증 없이 열려있는지, 카카오 OAuth2 로그인 흐름을 어떤 빈들이
+// 처리하는지, JWT 필터를 어디에 끼워넣는지를 여기서 전부 배선(wiring)한다.
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -39,19 +43,25 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
+                        // 회원가입, 이메일 로그인, 카카오 OAuth2 진입/콜백 경로만 로그인 없이 접근 가능. 나머지는 전부 인증 필요.
                         .requestMatchers(
                                 "/api/users/signup",
+                                "/api/auth/login",
                                 "/oauth2/**",
                                 "/login/oauth2/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
+                        // 카카오 인가 요청을 커스터마이즈(prompt=login 등)하는 리졸버.
                         .authorizationEndpoint(authorization -> authorization
                                 .authorizationRequestResolver(authorizationRequestResolver()))
+                        // 카카오에서 받은 프로필로 유저 조회/생성하는 서비스.
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                        // 로그인 성공 시 JWT를 만들어 프론트로 리다이렉트하는 핸들러.
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
+                // 매 요청마다 Authorization 헤더의 JWT를 검사해 SecurityContext에 인증 정보를 채워주는 필터.
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -61,6 +71,13 @@ public class SecurityConfig {
         return new CustomOAuth2AuthorizationRequestResolver(clientRegistrationRepository);
     }
 
+    // 비밀번호 해시/검증에 쓰는 빈. UserService가 가입 시 encode(), 로그인 시 matches()로 사용한다.
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    // 프론트(localhost:5173)에서 오는 요청만 자격증명(쿠키/헤더) 포함해서 허용.
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
