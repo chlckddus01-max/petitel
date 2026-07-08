@@ -41,15 +41,16 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         // 카카오가 발급한 유저 고유 id. 우리 DB의 provider_id로 저장/조회하는 키.
         String providerId = String.valueOf(attributes.get("id"));
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.getOrDefault("kakao_account", Map.of());
+        // getOrDefault는 키가 "없을 때"만 기본값을 쓰기 때문에, scope 동의를 안 해서 값이 null로 오는 경우
+        // (키 자체는 있지만 값이 null)엔 그대로 null을 반환해 NPE로 이어진다. 그래서 직접 null 체크한다.
+        Map<String, Object> kakaoAccount = asMap(attributes.get("kakao_account"));
+        Map<String, Object> profile = asMap(kakaoAccount.get("profile"));
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> profile = (Map<String, Object>) kakaoAccount.getOrDefault("profile", Map.of());
+        String emailValue = (String) kakaoAccount.get("email");
+        final String email = emailValue != null ? emailValue : providerId + "@kakao.local";
 
-        // scope 동의를 안 했거나 카카오 계정에 값이 없을 수 있어 기본값을 둔다.
-        String email = (String) kakaoAccount.getOrDefault("email", providerId + "@kakao.local");
-        String name = (String) profile.getOrDefault("nickname", "카카오유저");
+        String nameValue = (String) profile.get("nickname");
+        final String name = nameValue != null ? nameValue : "카카오유저";
 
         // provider+providerId로 기존 유저 찾고, 없으면(첫 로그인) 새로 가입시킨다.
         userMapper.findByProviderAndProviderId("KAKAO", providerId)
@@ -69,5 +70,11 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                 attributes,
                 userNameAttributeName
         );
+    }
+
+    // value가 null이거나 Map이 아니면 빈 맵을 반환해서 이후 .get() 호출이 NPE 없이 안전하게 null만 리턴하게 한다.
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> asMap(Object value) {
+        return value instanceof Map ? (Map<String, Object>) value : Map.of();
     }
 }
