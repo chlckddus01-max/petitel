@@ -1,9 +1,9 @@
 server:
   # Railway 등 배포 환경은 PORT 환경변수로 리슨할 포트를 지정해준다. 로컬은 그대로 8080.
   port: ${PORT:8080}
-  # Railway는 앞단에서 HTTPS를 종료하고 컨테이너에는 HTTP로 전달한다(X-Forwarded-Proto 헤더로 원래 https였음을 알려줌).
-  # 이 설정이 없으면 카카오 로그인의 {baseUrl}이 http://로 계산돼서 카카오 콘솔에 등록한 https:// 주소와
-  # 안 맞아 KOE006(등록되지 않은 리다이렉트 URI) 에러가 난다.
+  # Railway는 앞단에서 HTTPS를 종료하고 컨테이너에는 HTTP로 전달한다. 프록시가 X-Forwarded-* 헤더를
+  # 제대로 보내는 경우를 위해 켜두지만, 카카오 리다이렉트 URI 자체는 아래 app.backend-url로 직접 못박아서
+  # 이 설정에 의존하지 않게 했다(플랫폼마다 프록시 헤더 처리가 달라 신뢰하기 어려움).
   forward-headers-strategy: framework
 
 spring:
@@ -28,7 +28,9 @@ spring:
           kakao:
             client-id: ${kakao.client-id}
             client-secret: ${kakao.client-secret}
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            # {baseUrl}은 프록시 헤더(X-Forwarded-Proto)에 의존하는데 플랫폼마다 동작이 달라 신뢰하기 어려워서,
+            # 배포 시 BACKEND_URL 환경변수로 실제 https 주소를 직접 못박는다 (app.backend-url 정의는 아래 참고).
+            redirect-uri: "${app.backend-url}/login/oauth2/code/{registrationId}"
             authorization-grant-type: authorization_code
             client-authentication-method: client_secret_post
             scope:
@@ -43,3 +45,9 @@ spring:
 jwt:
   secret: ${jwt.secret}
   expiration: 86400000
+
+app:
+  # 이 백엔드 자신의 공개 주소. 카카오 리다이렉트 URI를 만드는 데 쓴다. 배포 시 BACKEND_URL로 override.
+  backend-url: ${BACKEND_URL:http://localhost:8080}
+  # 로그인 성공 후 돌려보낼 프론트 주소. 배포 시 FRONTEND_URL로 override.
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
