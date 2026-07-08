@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 function getTokenPayload() {
@@ -18,10 +19,21 @@ export default function Home() {
 
     const navigate = useNavigate()
     const user = getTokenPayload()
+    const [recommendedHotels, setRecommendedHotels] = useState([])
 
     const goToSearch = () => {
         navigate('/hotels')
     }
+
+    useEffect(() => {
+        fetch('/api/hotels?page=1&size=20')
+            .then((res) => res.json())
+            .then((data) => {
+                const topRated = [...data.hotels].sort((a, b) => b.rating - a.rating).slice(0, 3)
+                setRecommendedHotels(topRated)
+            })
+            .catch(() => {})
+    }, [])
 
     return (
         <div className="bg-slate-50 text-slate-800 antialiased">
@@ -232,37 +244,12 @@ export default function Home() {
                     </div>
 
                     <div className="grid gap-8 md:grid-cols-3">
-                        {[
-                            {
-                                name: '블루베리 펫 스튜디오',
-                                location: '강남구 삼성동',
-                                rating: 4.9,
-                                description: '최고급 호텔 시설과 맞춤형 산책 서비스',
-                                price: '55,000',
-                                image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBLYS09yPr64_vryRyMPBBTNlRS3gYV0oKvuK5PsxnTIm8JxSWbpsowFohfTWXwRr5lctU5lgRFJ_CLX32qJS9unHgyVgojDtOxy5JDh9gRWdd4jze__w9b3kd4GSAhxmdHyIXc78WKD-ZZXXwfUfiQTj6cgbWk61dr3fj7wAmafVtJvzst_PYKSStHlsckevoITQaKoJVvbArvNnjPZFiq4DQwSV_e4anjAiyECwW5vgmYUtK1WMxb7vpWQTFjubsj93pB3FpQkkTi',
-                            },
-                            {
-                                name: '포포 펫 하우스',
-                                location: '마포구 연남동',
-                                rating: 4.8,
-                                description: '조용하고 아늑한 소형견 전문 호텔',
-                                price: '45,000',
-                                image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDrYQVHpOAiNBJww2-mDcC4DJQwn4JBjV2smiiw-sErmzbiZEm6uVtr9Lqb83Mtl_qNeR149lCh8WCSeqMY0RqAxLFv1272J9xh1RfQTWeZF7nvABBV1uglBqyl1LHGCkYvFzxxeYpb0CrIH0hU2b7HhIMHyNd-KFrdT_NnWp6pVDDPjR1C1-N8C9hKLPVFZdjUsPAAHaGpzGznRMIjYzgdnK_4Oj9umk9iKvn9cgN9wE3r5gIypdii6nH36U-sStXHH74FFItxU1mX',
-                            },
-                            {
-                                name: '해피 펫 호텔',
-                                location: '송파구 잠실동',
-                                rating: 4.9,
-                                description: '넓은 전용 마당과 프라이빗 산책 서비스',
-                                price: '48,000',
-                                image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAef_Znk8cHugtKkbd_sw3lntNh58hTdUtxI_rxjZciXl6oPWVFPIUQKnTnjphOPLnhdj8C-oJ8i5Fzxvta4tKRVh9p8CXddqYO0juocCd7jzuquX0txoK6VR4mew6zJ4E53aMrk3glJURdIIgjW8W0HeIVSK7JXdHOiTix34t5YzlgG-8-bJyT8oDepszOlpe5YTOfq2bcDDVYGHUTFaXFrbNVfS9kqslqcsk3BV1uMrYg-ewzCLPF8fN1BaTrZL9X3Rf_8MVkM-c-',
-                            },
-                        ].map((hotel) => (
+                        {recommendedHotels.map((hotel) => (
                             <div
-                                key={hotel.name}
+                                key={hotel.id}
                                 className="group overflow-hidden rounded-3xl bg-white transition-all hover:-translate-y-1 cursor-pointer"
                                 style={{ boxShadow: "0 12px 32px -4px rgba(25, 71, 232, 0.08)" }}
-                                onClick={goToSearch}
+                                onClick={() => navigate(`/hotels/${hotel.id}`)}
                             >
                                 <div className="relative h-64">
                                     <img
@@ -271,7 +258,7 @@ export default function Home() {
                                         src={hotel.image}
                                     />
                                     <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-slate-700 backdrop-blur-md">
-                                        {hotel.location}
+                                        {hotel.address}
                                     </div>
                                     <button
                                         className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-700 backdrop-blur-md transition-colors hover:text-blue-600"
@@ -288,17 +275,17 @@ export default function Home() {
                                             <span className="material-symbols-outlined mr-1 text-sm text-yellow-400">
                                                 star
                                             </span>
-                                            {hotel.rating}
+                                            {hotel.rating.toFixed(1)}
                                         </div>
                                     </div>
-                                    <p className="mb-4 text-sm text-slate-500">{hotel.description}</p>
+                                    <p className="mb-4 text-sm text-slate-500">{hotel.tags.join(' · ')}</p>
                                     <div className="flex items-center justify-between border-t border-dashed border-slate-200 pt-4">
                                         <p className="text-sm font-bold text-slate-900">
-                                            1박 {hotel.price}원~
+                                            1박 {hotel.pricePerNight.toLocaleString()}원~
                                         </p>
                                         <button
                                             className="rounded-full bg-blue-50 px-4 py-2 text-xs font-bold text-blue-600 transition-colors hover:bg-blue-100"
-                                            onClick={(e) => { e.stopPropagation(); goToSearch(); }}
+                                            onClick={(e) => { e.stopPropagation(); navigate(`/hotels/${hotel.id}`); }}
                                         >
                                             상세보기
                                         </button>

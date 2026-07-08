@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 import com.petitel.backend.global.security.oauth2.CustomOAuth2AuthorizationRequestResolver;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -43,13 +44,14 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
-                        // 회원가입, 이메일 로그인, 카카오 OAuth2 진입/콜백 경로만 로그인 없이 접근 가능. 나머지는 전부 인증 필요.
+                        // 회원가입, 이메일 로그인, 카카오 OAuth2 진입/콜백, 호텔 탐색 경로만 로그인 없이 접근 가능. 나머지는 전부 인증 필요.
                         .requestMatchers(
                                 "/api/users/signup",
                                 "/api/auth/login",
                                 "/oauth2/**",
                                 "/login/oauth2/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/hotels/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

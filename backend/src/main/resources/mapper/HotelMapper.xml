@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petitel.backend.hotel.repository.HotelMapper">
+
+    <!-- search/facilities 조건은 목록 조회와 카운트 조회가 완전히 같아야 페이지 수 계산이 맞기 때문에 공용 조각으로 뺐다. -->
+    <sql id="hotelFilterWhere">
+        WHERE h.status = 'ACTIVE'
+        <if test="search != null and search != ''">
+            AND LOWER(h.name) LIKE LOWER(CONCAT('%', #{search}, '%'))
+        </if>
+        <if test="facilities != null and !facilities.isEmpty()">
+            AND h.id IN (
+                SELECT hf.hotel_id
+                FROM hotel_facilities hf
+                JOIN facilities f ON f.id = hf.facility_id
+                WHERE f.name IN
+                <foreach item="name" collection="facilities" open="(" separator="," close=")">
+                    #{name}
+                </foreach>
+                GROUP BY hf.hotel_id
+                HAVING COUNT(DISTINCT f.name) = #{facilityCount}
+            )
+        </if>
+    </sql>
+
+    <select id="findSummaries" resultType="com.petitel.backend.hotel.dto.HotelSummaryResponse">
+        SELECT
+            h.id AS id,
+            h.name AS name,
+            h.address AS address,
+            COALESCE((SELECT AVG(rv.rating) FROM reviews rv WHERE rv.hotel_id = h.id), 0) AS rating,
+            (SELECT COUNT(*) FROM reviews rv WHERE rv.hotel_id = h.id) AS review_count,
+            (SELECT MIN(r.price_per_night) FROM rooms r WHERE r.hotel_id = h.id AND r.status = 'SALE') AS price_per_night,
+            (SELECT hi.image_url FROM hotel_images hi WHERE hi.hotel_id = h.id ORDER BY hi.sort_order LIMIT 1) AS image
+        FROM hotels h
+        <include refid="hotelFilterWhere"/>
+        ORDER BY h.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countSummaries" resultType="long">
+        SELECT COUNT(*)
+        FROM hotels h
+        <include refid="hotelFilterWhere"/>
+    </select>
+
+    <select id="findAllFacilities" resultType="com.petitel.backend.hotel.dto.FacilityResponse">
+        SELECT f.name AS name, f.icon AS icon
+        FROM facilities f
+        ORDER BY f.name
+    </select>
+
+    <select id="findFacilityNamesByHotelId" resultType="string">
+        SELECT f.name
+        FROM hotel_facilities hf
+        JOIN facilities f ON f.id = hf.facility_id
+        WHERE hf.hotel_id = #{hotelId}
+        ORDER BY f.name
+    </select>
+
+    <select id="findDetailById" resultType="com.petitel.backend.hotel.dto.HotelDetailResponse">
+        SELECT
+            h.id AS id,
+            h.name AS name,
+            h.address AS address,
+            h.description AS description,
+            COALESCE((SELECT AVG(rv.rating) FROM reviews rv WHERE rv.hotel_id = h.id), 0) AS rating,
+            (SELECT COUNT(*) FROM reviews rv WHERE rv.hotel_id = h.id) AS review_count,
+            (SELECT hi.image_url FROM hotel_images hi WHERE hi.hotel_id = h.id ORDER BY hi.sort_order LIMIT 1) AS image
+        FROM hotels h
+        WHERE h.id = #{hotelId}
+          AND h.status = 'ACTIVE'
+    </select>
+
+    <select id="findFacilitiesByHotelId" resultType="com.petitel.backend.hotel.dto.FacilityResponse">
+        SELECT f.name AS name, f.icon AS icon
+        FROM hotel_facilities hf
+        JOIN facilities f ON f.id = hf.facility_id
+        WHERE hf.hotel_id = #{hotelId}
+        ORDER BY f.name
+    </select>
+
+    <select id="findImageUrlsByHotelId" resultType="string">
+        SELECT hi.image_url
+        FROM hotel_images hi
+        WHERE hi.hotel_id = #{hotelId}
+        ORDER BY hi.sort_order
+    </select>
+
+    <select id="findRoomsByHotelId" resultType="com.petitel.backend.hotel.dto.RoomResponse">
+        SELECT r.id AS id, r.name AS name, r.price_per_night AS price_per_night, r.max_pets AS max_pets
+        FROM rooms r
+        WHERE r.hotel_id = #{hotelId}
+          AND r.status = 'SALE'
+        ORDER BY r.price_per_night
+    </select>
+
+    <!-- 리뷰 작성자 이름은 개인정보라서 "김*지"처럼 앞/뒤 글자만 남기고 마스킹해서 내려준다. -->
+    <select id="findReviewsByHotelId" resultType="com.petitel.backend.hotel.dto.ReviewResponse">
+        SELECT
+            CASE
+                WHEN length(u.name) &lt;= 1 THEN u.name
+                ELSE substring(u.name, 1, 1) || '*' || substring(u.name, length(u.name), 1)
+            END AS reviewer_name,
+            rv.rating AS rating,
+            rv.content AS content
+        FROM reviews rv
+        JOIN users u ON u.id = rv.user_id
+        WHERE rv.hotel_id = #{hotelId}
+        ORDER BY rv.created_at DESC
+    </select>
+
+</mapper>

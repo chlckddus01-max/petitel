@@ -1,18 +1,45 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { FACILITIES, getHotelById } from '../data/hotels'
 import { isLoggedIn, setPostLoginRedirect } from '../utils/auth'
 import ConfirmModal from '../components/ConfirmModal'
+
+const SWIPE_THRESHOLD_PX = 40
 
 export default function HotelDetail() {
     const navigate = useNavigate()
     const { id } = useParams()
-    const hotel = getHotelById(id)
 
-    const [wishlisted, setWishlisted] = useState(!!hotel?.wishlisted)
+    const [hotel, setHotel] = useState(null)
+    const [loading, setLoading] = useState(true)
+    const [notFound, setNotFound] = useState(false)
+    const [wishlisted, setWishlisted] = useState(false)
     const [showLoginModal, setShowLoginModal] = useState(false)
+    const [activeImage, setActiveImage] = useState(0)
+    const touchStartX = useRef(null)
 
-    if (!hotel) {
+    useEffect(() => {
+        fetch(`/api/hotels/${id}`)
+            .then((res) => {
+                if (!res.ok) throw new Error('not found')
+                return res.json()
+            })
+            .then((data) => {
+                setHotel(data)
+                setActiveImage(0)
+            })
+            .catch(() => setNotFound(true))
+            .finally(() => setLoading(false))
+    }, [id])
+
+    if (loading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-white text-slate-800">
+                <p className="text-sm text-slate-500">호텔 정보를 불러오는 중...</p>
+            </div>
+        )
+    }
+
+    if (notFound || !hotel) {
         return (
             <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white text-slate-800">
                 <p className="text-lg font-bold">호텔을 찾을 수 없습니다.</p>
@@ -25,8 +52,6 @@ export default function HotelDetail() {
             </div>
         )
     }
-
-    const facilities = FACILITIES.filter((f) => hotel.facilityIds.includes(f.id))
 
     function goToReservation() {
         if (isLoggedIn()) {
@@ -41,10 +66,32 @@ export default function HotelDetail() {
         navigate('/login')
     }
 
+    const images = hotel.images?.length > 0 ? hotel.images : [hotel.image]
+
+    function goToImage(index) {
+        setActiveImage((index + images.length) % images.length)
+    }
+
+    function handleTouchStart(e) {
+        touchStartX.current = e.touches[0].clientX
+    }
+
+    function handleTouchEnd(e) {
+        if (touchStartX.current === null) return
+        const delta = e.changedTouches[0].clientX - touchStartX.current
+        touchStartX.current = null
+        if (delta <= -SWIPE_THRESHOLD_PX) goToImage(activeImage + 1)
+        else if (delta >= SWIPE_THRESHOLD_PX) goToImage(activeImage - 1)
+    }
+
     return (
         <div className="bg-white text-slate-800 antialiased">
-            <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-100 sm:aspect-[16/7]">
-                <img alt={hotel.name} className="h-full w-full object-cover" src={hotel.image} />
+            <div
+                className="relative aspect-[16/9] w-full touch-pan-y overflow-hidden bg-slate-100 sm:aspect-[16/7]"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
+                <img alt={hotel.name} className="h-full w-full object-cover" src={images[activeImage]} />
 
                 <button
                     className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-sm"
@@ -77,11 +124,30 @@ export default function HotelDetail() {
                     </button>
                 </div>
 
+                {images.length > 1 && (
+                    <>
+                        <button
+                            className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 shadow-sm hover:bg-white"
+                            onClick={() => goToImage(activeImage - 1)}
+                        >
+                            <span className="material-symbols-outlined">chevron_left</span>
+                        </button>
+                        <button
+                            className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 shadow-sm hover:bg-white"
+                            onClick={() => goToImage(activeImage + 1)}
+                        >
+                            <span className="material-symbols-outlined">chevron_right</span>
+                        </button>
+                    </>
+                )}
+
                 <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5">
-                    {[0, 1, 2].map((dot) => (
-                        <span
-                            key={dot}
-                            className={dot === 0 ? 'h-1.5 w-1.5 rounded-full bg-white' : 'h-1.5 w-1.5 rounded-full bg-white/50'}
+                    {images.map((image, index) => (
+                        <button
+                            key={image}
+                            aria-label={`${index + 1}번째 사진 보기`}
+                            onClick={() => goToImage(index)}
+                            className={index === activeImage ? 'h-1.5 w-1.5 rounded-full bg-white' : 'h-1.5 w-1.5 rounded-full bg-white/50'}
                         />
                     ))}
                 </div>
@@ -89,14 +155,7 @@ export default function HotelDetail() {
 
             <div className="mx-auto max-w-4xl px-6 pb-32 pt-6">
                 <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-                    <div className="flex items-center gap-2">
-                        {hotel.tier && (
-                            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                                {hotel.tier}
-                            </span>
-                        )}
-                        <h1 className="text-xl font-bold text-slate-900">{hotel.name}</h1>
-                    </div>
+                    <h1 className="text-xl font-bold text-slate-900">{hotel.name}</h1>
 
                     <div className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
                         <span
@@ -105,19 +164,19 @@ export default function HotelDetail() {
                         >
                             star
                         </span>
-                        <span className="font-bold text-slate-700">{hotel.rating}</span>
+                        <span className="font-bold text-slate-700">{hotel.rating.toFixed(1)}</span>
                         <span>({hotel.reviewCount} reviews)</span>
                         <span>·</span>
                         <span>{hotel.address}</span>
                     </div>
 
                     <div className="mt-6 grid grid-cols-4 gap-4 border-t border-slate-100 pt-6">
-                        {facilities.map((facility) => (
-                            <div key={facility.id} className="flex flex-col items-center gap-2">
+                        {hotel.facilities.map((facility) => (
+                            <div key={facility.name} className="flex flex-col items-center gap-2">
                                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-600">
                                     <span className="material-symbols-outlined">{facility.icon}</span>
                                 </div>
-                                <span className="text-xs font-medium text-slate-600">{facility.label}</span>
+                                <span className="text-xs font-medium text-slate-600">{facility.name}</span>
                             </div>
                         ))}
                     </div>
@@ -132,24 +191,19 @@ export default function HotelDetail() {
                     <div className="mt-4 space-y-4">
                         {hotel.rooms.map((room) => (
                             <div
-                                key={room.name}
+                                key={room.id}
                                 className="flex items-center gap-4 rounded-2xl border border-slate-100 p-4"
                             >
                                 <div className="h-16 w-16 shrink-0 rounded-xl bg-slate-100" />
 
                                 <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-slate-900">{room.name}</h3>
-                                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-600">
-                                            {room.sizeTag}
-                                        </span>
-                                    </div>
-                                    <p className="mt-1 text-xs text-slate-500">{room.capacityLabel}</p>
+                                    <h3 className="font-bold text-slate-900">{room.name}</h3>
+                                    <p className="mt-1 text-xs text-slate-500">최대 {room.maxPets}마리 동반 가능</p>
                                 </div>
 
                                 <div className="text-right">
                                     <span className="text-lg font-bold text-blue-600">
-                                        {room.price.toLocaleString()}
+                                        {room.pricePerNight.toLocaleString()}
                                     </span>{' '}
                                     <span className="text-xs font-bold text-blue-600">KRW</span>
                                 </div>
@@ -173,7 +227,7 @@ export default function HotelDetail() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <div className="h-8 w-8 rounded-full bg-slate-200" />
-                                        <span className="text-sm font-bold text-slate-800">{review.reviewer}</span>
+                                        <span className="text-sm font-bold text-slate-800">{review.reviewerName}</span>
                                     </div>
                                     <span className="flex items-center gap-1 text-sm font-bold text-amber-500">
                                         <span

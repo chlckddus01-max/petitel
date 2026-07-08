@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DayPicker } from 'react-day-picker'
 import { ko } from 'react-day-picker/locale'
 import 'react-day-picker/style.css'
-import { FACILITIES, HOTELS } from '../data/hotels'
 
 const PET_TYPES = ['강아지', '고양이', '기타']
+const PAGE_SIZE = 6
 
 function formatDateRange(range) {
     if (!range?.from) return '날짜 선택'
@@ -38,14 +38,57 @@ export default function Hotels() {
     const user = getTokenPayload()
 
     const [searchText, setSearchText] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
     const [petType, setPetType] = useState('강아지')
+    const [facilities, setFacilities] = useState([])
     const [activeFacilities, setActiveFacilities] = useState([])
-    const [wishlisted, setWishlisted] = useState(
-        new Set(HOTELS.filter((h) => h.wishlisted).map((h) => h.id))
-    )
+    const [hotels, setHotels] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+    const [wishlisted, setWishlisted] = useState(new Set())
+    const [page, setPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [totalCount, setTotalCount] = useState(0)
     const [dateRange, setDateRange] = useState({ from: new Date(2026, 6, 10), to: new Date(2026, 6, 12) })
     const [showCalendar, setShowCalendar] = useState(false)
     const calendarRef = useRef(null)
+
+    // 검색창 입력이 멈추고 300ms 뒤에만 실제 검색어를 반영해 매 타이핑마다 서버에 요청하지 않게 한다.
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchText.trim())
+            setPage(1)
+        }, 300)
+        return () => clearTimeout(timer)
+    }, [searchText])
+
+    useEffect(() => {
+        fetch('/api/hotels/facilities')
+            .then((res) => res.json())
+            .then(setFacilities)
+            .catch(() => {})
+    }, [])
+
+    // 검색어/필터/페이지가 바뀔 때마다 서버에서 그 조건에 맞는 한 페이지 분량만 새로 받아온다.
+    useEffect(() => {
+        const params = new URLSearchParams()
+        if (debouncedSearch) params.set('search', debouncedSearch)
+        activeFacilities.forEach((name) => params.append('facility', name))
+        params.set('page', String(page))
+        params.set('size', String(PAGE_SIZE))
+
+        fetch(`/api/hotels?${params.toString()}`)
+            .then((res) => res.json())
+            .then((data) => {
+                setHotels(data.hotels)
+                setPage(data.page)
+                setTotalPages(data.totalPages)
+                setTotalCount(data.totalCount)
+                setError(null)
+            })
+            .catch(() => setError('호텔 목록을 불러오지 못했습니다.'))
+            .finally(() => setLoading(false))
+    }, [debouncedSearch, activeFacilities, page])
 
     useEffect(() => {
         if (!showCalendar) return
@@ -58,10 +101,11 @@ export default function Hotels() {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [showCalendar])
 
-    function toggleFacility(id) {
+    function toggleFacility(name) {
         setActiveFacilities((prev) =>
-            prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
+            prev.includes(name) ? prev.filter((f) => f !== name) : [...prev, name]
         )
+        setPage(1)
     }
 
     function toggleWishlist(id) {
@@ -71,15 +115,6 @@ export default function Hotels() {
             return next
         })
     }
-
-    const filteredHotels = useMemo(() => {
-        const activeLabels = FACILITIES.filter((f) => activeFacilities.includes(f.id)).map((f) => f.label)
-        return HOTELS.filter((hotel) => {
-            const matchesSearch = hotel.name.toLowerCase().includes(searchText.trim().toLowerCase())
-            const matchesFacilities = activeLabels.every((label) => hotel.tags.includes(label))
-            return matchesSearch && matchesFacilities
-        })
-    }, [searchText, activeFacilities])
 
     return (
         <div className="bg-white text-slate-800 antialiased">
@@ -223,20 +258,20 @@ export default function Hotels() {
 
                     <div className="mt-4 flex flex-wrap items-center gap-3">
                         <span className="text-sm font-medium text-slate-500">시설/서비스</span>
-                        {FACILITIES.map((facility) => {
-                            const active = activeFacilities.includes(facility.id)
+                        {facilities.map((facility) => {
+                            const active = activeFacilities.includes(facility.name)
                             return (
                                 <button
-                                    key={facility.id}
+                                    key={facility.name}
                                     className={
                                         active
                                             ? 'flex items-center gap-1.5 rounded-full border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-600'
                                             : 'flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-blue-200'
                                     }
-                                    onClick={() => toggleFacility(facility.id)}
+                                    onClick={() => toggleFacility(facility.name)}
                                 >
                                     <span className="material-symbols-outlined text-lg">{facility.icon}</span>
-                                    {facility.label}
+                                    {facility.name}
                                 </button>
                             )
                         })}
@@ -250,7 +285,7 @@ export default function Hotels() {
                         <div>
                             <h1 className="text-3xl font-bold text-slate-900">강남구 추천 호텔</h1>
                             <p className="mt-1 text-sm text-slate-500">
-                                총 {filteredHotels.length}개의 검색 결과가 있습니다.
+                                총 {totalCount}개의 검색 결과가 있습니다.
                             </p>
                         </div>
 
@@ -266,8 +301,11 @@ export default function Hotels() {
                         </div>
                     </div>
 
+                    {loading && <p className="py-10 text-center text-sm text-slate-500">호텔을 불러오는 중...</p>}
+                    {error && <p className="py-10 text-center text-sm text-red-500">{error}</p>}
+
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {filteredHotels.map((hotel) => (
+                        {hotels.map((hotel) => (
                             <div
                                 key={hotel.id}
                                 className="cursor-pointer overflow-hidden rounded-3xl border border-slate-100 bg-white transition-shadow hover:shadow-lg"
@@ -309,7 +347,7 @@ export default function Hotels() {
                                             >
                                                 star
                                             </span>
-                                            {hotel.rating} ({hotel.reviewCount})
+                                            {hotel.rating.toFixed(1)} ({hotel.reviewCount})
                                         </span>
                                     </div>
 
@@ -338,26 +376,37 @@ export default function Hotels() {
                         ))}
                     </div>
 
-                    <div className="mt-12 flex items-center justify-center gap-2">
-                        <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:border-blue-200">
-                            <span className="material-symbols-outlined text-lg">chevron_left</span>
-                        </button>
-                        {[1, 2, 3].map((page) => (
+                    {totalPages > 1 && (
+                        <div className="mt-12 flex items-center justify-center gap-2">
                             <button
-                                key={page}
-                                className={
-                                    page === 1
-                                        ? 'flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white'
-                                        : 'flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-sm font-medium text-slate-600 transition-colors hover:border-blue-200'
-                                }
+                                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:border-blue-200 disabled:cursor-not-allowed disabled:opacity-40"
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={page === 1}
                             >
-                                {page}
+                                <span className="material-symbols-outlined text-lg">chevron_left</span>
                             </button>
-                        ))}
-                        <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:border-blue-200">
-                            <span className="material-symbols-outlined text-lg">chevron_right</span>
-                        </button>
-                    </div>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                                <button
+                                    key={p}
+                                    className={
+                                        p === page
+                                            ? 'flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white'
+                                            : 'flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-sm font-medium text-slate-600 transition-colors hover:border-blue-200'
+                                    }
+                                    onClick={() => setPage(p)}
+                                >
+                                    {p}
+                                </button>
+                            ))}
+                            <button
+                                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:border-blue-200 disabled:cursor-not-allowed disabled:opacity-40"
+                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                            >
+                                <span className="material-symbols-outlined text-lg">chevron_right</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </section>
 
