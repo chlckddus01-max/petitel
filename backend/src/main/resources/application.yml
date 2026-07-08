@@ -1,6 +1,10 @@
 server:
   # Railway 등 배포 환경은 PORT 환경변수로 리슨할 포트를 지정해준다. 로컬은 그대로 8080.
   port: ${PORT:8080}
+  # Railway는 앞단에서 HTTPS를 종료하고 컨테이너에는 HTTP로 전달한다(X-Forwarded-Proto 헤더로 원래 https였음을 알려줌).
+  # 이 설정이 없으면 카카오 로그인의 {baseUrl}이 http://로 계산돼서 카카오 콘솔에 등록한 https:// 주소와
+  # 안 맞아 KOE006(등록되지 않은 리다이렉트 URI) 에러가 난다.
+  forward-headers-strategy: framework
 
 spring:
   config:
