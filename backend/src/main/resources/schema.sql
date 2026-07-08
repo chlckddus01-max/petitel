@@ -1,4 +1,6 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- gen_random_uuid()는 PostgreSQL 13부터 pg_catalog(코어)에 내장된 함수라 pgcrypto 확장이 필요 없다.
+-- (예전엔 pgcrypto를 CREATE EXTENSION 했었는데, Railway Postgres에서 권한 문제로 실패해서 제거함 —
+-- 애초에 불필요한 의존성이었다.)
 
 -- 로컬은 이 스키마를 수동으로 미리 만들어뒀지만, 배포 환경(Railway 등)의 새 Postgres에는 없으므로
 -- 여기서 직접 만들어 어떤 환경에서도 스크립트 하나로 초기화되게 한다.
