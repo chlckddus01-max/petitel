@@ -1,5 +1,9 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- 로컬은 이 스키마를 수동으로 미리 만들어뒀지만, 배포 환경(Railway 등)의 새 Postgres에는 없으므로
+-- 여기서 직접 만들어 어떤 환경에서도 스크립트 하나로 초기화되게 한다.
+CREATE SCHEMA IF NOT EXISTS petitel;
+
 CREATE TABLE IF NOT EXISTS admin_users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     admin_id VARCHAR(50) NOT NULL,

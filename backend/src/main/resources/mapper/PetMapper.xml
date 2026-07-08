@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petitel.backend.pet.repository.PetMapper">
+
+    <resultMap id="petResultMap" type="com.petitel.backend.pet.domain.Pet">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="name" column="name"/>
+        <result property="species" column="species"/>
+        <result property="breed" column="breed"/>
+        <result property="weight" column="weight"/>
+        <result property="age" column="age"/>
+        <result property="neutered" column="neutered"/>
+        <result property="notes" column="notes"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.petitel.backend.pet.domain.Pet">
+        INSERT INTO pets (id, user_id, name, species, breed, weight, age, neutered, notes, created_at)
+        VALUES (#{id}, #{userId}, #{name}, #{species}, #{breed}, #{weight}, #{age}, #{neutered}, #{notes}, #{createdAt})
+    </insert>
+
+    <select id="findByUserId" resultMap="petResultMap">
+        SELECT *
+        FROM pets
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findByIdsAndUserId" resultMap="petResultMap">
+        SELECT *
+        FROM pets
+        WHERE user_id = #{userId}
+          AND id IN
+        <foreach item="petId" collection="petIds" open="(" separator="," close=")">
+            #{petId}
+        </foreach>
+    </select>
+
+    <delete id="deleteByIdAndUserId">
+        DELETE FROM pets
+        WHERE id = #{petId}
+          AND user_id = #{userId}
+    </delete>
+
+</mapper>

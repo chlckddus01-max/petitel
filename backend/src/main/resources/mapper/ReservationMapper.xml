@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petitel.backend.reservation.repository.ReservationMapper">
+
+    <!-- 날짜 겹침 판정: 기존 예약의 [check_in, check_out) 구간과 새 요청 구간이 하나라도 겹치면 카운트된다. -->
+    <select id="countOverlapping" resultType="long">
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE room_id = #{roomId}
+          AND status IN ('PENDING', 'CONFIRMED')
+          AND check_in &lt; #{checkOut}
+          AND check_out &gt; #{checkIn}
+    </select>
+
+    <insert id="insert" parameterType="com.petitel.backend.reservation.domain.Reservation">
+        INSERT INTO reservations (id, user_id, hotel_id, room_id, check_in, check_out, status, request_note, total_price, created_at, updated_at)
+        VALUES (#{id}, #{userId}, #{hotelId}, #{roomId}, #{checkIn}, #{checkOut}, #{status}, #{requestNote}, #{totalPrice}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <insert id="insertPetLinks">
+        INSERT INTO reservation_pets (reservation_id, pet_id)
+        VALUES
+        <foreach item="petId" collection="petIds" separator=",">
+            (#{reservationId}, #{petId})
+        </foreach>
+    </insert>
+
+    <select id="findByUserId" resultType="com.petitel.backend.reservation.dto.ReservationResponse">
+        SELECT
+            res.id AS id,
+            h.id AS hotelId,
+            h.name AS hotelName,
+            r.name AS roomName,
+            res.check_in AS checkIn,
+            res.check_out AS checkOut,
+            (res.check_out - res.check_in) AS nights,
+            res.total_price AS totalPrice,
+            res.status AS status,
+            res.request_note AS requestNote,
+            res.created_at AS createdAt
+        FROM reservations res
+        JOIN hotels h ON h.id = res.hotel_id
+        JOIN rooms r ON r.id = res.room_id
+        WHERE res.user_id = #{userId}
+        ORDER BY res.created_at DESC
+    </select>
+
+    <select id="findPetNamesByReservationIds" resultType="com.petitel.backend.reservation.repository.ReservationPetNameRow">
+        SELECT rp.reservation_id AS reservationId, p.name AS name
+        FROM reservation_pets rp
+        JOIN pets p ON p.id = rp.pet_id
+        WHERE rp.reservation_id IN
+        <foreach item="id" collection="reservationIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+</mapper>

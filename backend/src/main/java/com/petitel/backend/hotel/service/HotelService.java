@@ -4,15 +4,17 @@ import com.petitel.backend.hotel.dto.FacilityResponse;
 import com.petitel.backend.hotel.dto.HotelDetailResponse;
 import com.petitel.backend.hotel.dto.HotelPageResponse;
 import com.petitel.backend.hotel.dto.HotelSummaryResponse;
+import com.petitel.backend.hotel.repository.HotelFacilityTagRow;
 import com.petitel.backend.hotel.repository.HotelMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 // 목록/상세 모두 기본 정보와 편의시설·객실·리뷰를 별도 쿼리로 나눠 조회한 뒤 여기서 하나로 조립한다.
-// 호텔 수가 적은 MVP 단계라 N+1이어도 문제없고, 매퍼의 SQL을 단순하게 유지하는 쪽을 택했다.
 @Service
 @RequiredArgsConstructor
 public class HotelService {
@@ -31,9 +33,22 @@ public class HotelService {
         int offset = (currentPage - 1) * safeSize;
 
         List<HotelSummaryResponse> hotels = hotelMapper.findSummaries(search, facilities, facilityCount, offset, safeSize);
-        hotels.forEach(hotel -> hotel.setTags(hotelMapper.findFacilityNamesByHotelId(hotel.getId())));
+        attachTags(hotels);
 
         return new HotelPageResponse(hotels, currentPage, totalPages, totalCount);
+    }
+
+    // 페이지에 담긴 호텔 수만큼 편의시설을 따로 조회하던 N+1을 없애고, 호텔 id 목록으로 한 번에 조회해 묶는다.
+    private void attachTags(List<HotelSummaryResponse> hotels) {
+        if (hotels.isEmpty()) return;
+
+        List<UUID> hotelIds = hotels.stream().map(HotelSummaryResponse::getId).toList();
+        Map<UUID, List<String>> tagsByHotelId = hotelMapper.findFacilityNamesByHotelIds(hotelIds).stream()
+                .collect(Collectors.groupingBy(
+                        HotelFacilityTagRow::getHotelId,
+                        Collectors.mapping(HotelFacilityTagRow::getName, Collectors.toList())));
+
+        hotels.forEach(hotel -> hotel.setTags(tagsByHotelId.getOrDefault(hotel.getId(), List.of())));
     }
 
     public List<FacilityResponse> getFacilities() {

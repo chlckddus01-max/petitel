@@ -4,6 +4,7 @@ import com.petitel.backend.global.security.jwt.JwtAuthenticationFilter;
 import com.petitel.backend.global.security.oauth2.CustomOAuth2UserService;
 import com.petitel.backend.global.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -35,6 +36,10 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ClientRegistrationRepository clientRegistrationRepository;
+
+    // 배포 환경에서는 CORS_ALLOWED_ORIGINS 환경변수로 실제 프론트 도메인을 넣는다. 여러 개면 콤마로 구분.
+    @Value("${cors.allowed-origins:http://localhost:5173}")
+    private String allowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -79,11 +84,11 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // 프론트(localhost:5173)에서 오는 요청만 자격증명(쿠키/헤더) 포함해서 허용.
+    // cors.allowed-origins(기본값 localhost:5173)에서 오는 요청만 자격증명(쿠키/헤더) 포함해서 허용.
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

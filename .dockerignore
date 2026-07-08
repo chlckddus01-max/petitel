@@ -1,0 +1,8 @@
+frontend/
+docs/
+.idea/
+backend/build/
+backend/.gradle/
+backend/out/
+backend/src/main/resources/application-secret.yml
+backend/gradle.properties

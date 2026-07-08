@@ -6,6 +6,7 @@ import com.petitel.backend.user.repository.UserMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -23,8 +24,10 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final JwtProvider jwtProvider;
     private final UserMapper userMapper;
 
-    // 로그인 완료 후 리다이렉트할 프론트 콜백 경로. 프론트의 OAuthCallback.jsx가 여기서 token 쿼리를 읽는다.
-    private static final String REDIRECT_URI = "http://localhost:5173/oauth/callback";
+    // 로그인 완료 후 리다이렉트할 프론트 도메인. 배포 환경에서는 FRONTEND_URL 환경변수로 실제 도메인을 넣는다.
+    // 프론트의 OAuthCallback.jsx가 여기서 token 쿼리를 읽는다.
+    @Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -43,6 +46,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String token = jwtProvider.createToken(user.getId(), user.getEmail(), user.getName());
 
         // 프론트는 이 쿼리파라미터의 token을 localStorage에 저장하고 홈으로 이동.
-        getRedirectStrategy().sendRedirect(request, response, REDIRECT_URI + "?token=" + token);
+        getRedirectStrategy().sendRedirect(request, response, frontendUrl + "/oauth/callback?token=" + token);
     }
 }

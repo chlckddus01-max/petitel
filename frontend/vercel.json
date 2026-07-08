@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://YOUR-RAILWAY-BACKEND-URL/api/:path*" },
+    { "source": "/oauth2/:path*", "destination": "https://YOUR-RAILWAY-BACKEND-URL/oauth2/:path*" },
+    { "source": "/login/oauth2/:path*", "destination": "https://YOUR-RAILWAY-BACKEND-URL/login/oauth2/:path*" }
+  ]
+}

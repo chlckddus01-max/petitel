@@ -46,7 +46,7 @@ export default function Login() {
     function loginWithKakao() {
         const forceLogin = localStorage.getItem('kakao_force_login') === 'true';
         localStorage.removeItem('kakao_force_login');
-        window.location.href = "http://localhost:8080/oauth2/authorization/kakao" + (forceLogin ? "?prompt_login=true" : "");
+        window.location.href = "/oauth2/authorization/kakao" + (forceLogin ? "?prompt_login=true" : "");
     }
 
     return (
