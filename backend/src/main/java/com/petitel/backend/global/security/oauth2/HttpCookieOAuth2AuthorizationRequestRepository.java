@@ -97,6 +97,10 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         cookie.setHttpOnly(true);
         cookie.setSecure(secure);
         cookie.setMaxAge(COOKIE_EXPIRE_SECONDS);
+        // SameSite를 명시 안 하면 브라우저 기본값에 맡겨지는데, 세션 쿠키(JSESSIONID)는
+        // server.servlet.session.cookie.same-site로 명시적으로 Lax가 찍혀서 정상 도착하는 반면
+        // 이 쿠키는 명시가 없어 카카오 콜백(리다이렉트로 돌아오는 요청)에서 계속 누락됐다. 직접 못박는다.
+        cookie.setAttribute("SameSite", "Lax");
         response.addCookie(cookie);
     }
 
