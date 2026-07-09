@@ -69,7 +69,11 @@ export default function Signup() {
     function loginWithKakao() {
         const forceLogin = localStorage.getItem('kakao_force_login') === 'true';
         localStorage.removeItem('kakao_force_login');
-        window.location.href = "/oauth2/authorization/kakao" + (forceLogin ? "?prompt_login=true" : "");
+        // Vercel 프록시(상대경로)를 거치면 인가 요청 쿠키가 petitel.vercel.app에 저장되는데,
+        // 카카오 콜백은 Railway 도메인으로 직접 오기 때문에 그 쿠키가 전달이 안 된다.
+        // 그래서 처음부터 백엔드 도메인으로 직접 이동시켜 전체 흐름을 한 도메인 안에서 끝낸다.
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
+        window.location.href = backendUrl + "/oauth2/authorization/kakao" + (forceLogin ? "?prompt_login=true" : "");
     }
 
     return (
