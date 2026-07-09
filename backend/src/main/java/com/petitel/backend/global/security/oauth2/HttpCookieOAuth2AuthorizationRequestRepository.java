@@ -11,9 +11,14 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequ
 import org.springframework.stereotype.Component;
 import org.springframework.util.SerializationUtils;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 // 카카오로 리다이렉트했다가 돌아오는 짧은 순간의 OAuth2AuthorizationRequest를 서버 세션(HttpSession)이
 // 아니라 쿠키에 직접 저장한다. Railway 배포에서 두 요청이 세션을 공유 못 하거나(다중 인스턴스),
@@ -104,12 +109,33 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         });
     }
 
+    // 직렬화한 OAuth2AuthorizationRequest는 2.5KB가 넘어가는데(중복 필드가 많음), 배포 환경 프록시가
+    // 이 정도로 큰 Set-Cookie 헤더를 조용히 잘라내거나 버리는 것으로 확인돼서 gzip으로 압축해 크기를 줄인다.
     private String serialize(OAuth2AuthorizationRequest authorizationRequest) {
-        return Base64.getUrlEncoder().encodeToString(SerializationUtils.serialize(authorizationRequest));
+        byte[] raw = SerializationUtils.serialize(authorizationRequest);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(gzip(raw));
     }
 
     private OAuth2AuthorizationRequest deserialize(Cookie cookie) {
-        return (OAuth2AuthorizationRequest) SerializationUtils.deserialize(
-                Base64.getUrlDecoder().decode(cookie.getValue()));
+        byte[] compressed = Base64.getUrlDecoder().decode(cookie.getValue());
+        return (OAuth2AuthorizationRequest) SerializationUtils.deserialize(gunzip(compressed));
+    }
+
+    private byte[] gzip(byte[] data) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzos = new GZIPOutputStream(baos)) {
+            gzos.write(data);
+        } catch (IOException e) {
+            throw new IllegalStateException("OAuth2AuthorizationRequest 압축 실패", e);
+        }
+        return baos.toByteArray();
+    }
+
+    private byte[] gunzip(byte[] data) {
+        try (GZIPInputStream gzis = new GZIPInputStream(new ByteArrayInputStream(data))) {
+            return gzis.readAllBytes();
+        } catch (IOException e) {
+            throw new IllegalStateException("OAuth2AuthorizationRequest 압축 해제 실패", e);
+        }
     }
 }
