@@ -1,0 +1,88 @@
+package com.petitel.backend.global.security.oauth2;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.util.SerializationUtils;
+
+import java.util.Base64;
+import java.util.Optional;
+
+// 카카오로 리다이렉트했다가 돌아오는 짧은 순간의 OAuth2AuthorizationRequest를 서버 세션(HttpSession)이
+// 아니라 쿠키에 직접 저장한다. Railway 배포에서 두 요청이 세션을 공유 못 하거나(다중 인스턴스),
+// 세션 쿠키의 Secure/SameSite 조합이 플랫폼 프록시와 안 맞아 계속 "authorization_request_not_found"로
+// 실패해서, 서버 상태에 아예 의존하지 않는 방식으로 바꿨다.
+@Component
+public class HttpCookieOAuth2AuthorizationRequestRepository
+        implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
+
+    private static final String COOKIE_NAME = "oauth2_auth_request";
+    private static final int COOKIE_EXPIRE_SECONDS = 180;
+
+    // 세션 쿠키와 동일한 기준으로 Secure 여부를 맞춘다 (로컬 http는 false, 배포 https는 true).
+    @Value("${server.servlet.session.cookie.secure:false}")
+    private boolean secure;
+
+    @Override
+    public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
+        return getCookie(request).map(this::deserialize).orElse(null);
+    }
+
+    @Override
+    public void saveAuthorizationRequest(OAuth2AuthorizationRequest authorizationRequest,
+                                          HttpServletRequest request, HttpServletResponse response) {
+        if (authorizationRequest == null) {
+            deleteCookie(request, response);
+            return;
+        }
+        addCookie(response, serialize(authorizationRequest));
+    }
+
+    @Override
+    public OAuth2AuthorizationRequest removeAuthorizationRequest(HttpServletRequest request, HttpServletResponse response) {
+        OAuth2AuthorizationRequest authorizationRequest = loadAuthorizationRequest(request);
+        deleteCookie(request, response);
+        return authorizationRequest;
+    }
+
+    private Optional<Cookie> getCookie(HttpServletRequest request) {
+        if (request.getCookies() == null) return Optional.empty();
+        for (Cookie cookie : request.getCookies()) {
+            if (COOKIE_NAME.equals(cookie.getName())) {
+                return Optional.of(cookie);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private void addCookie(HttpServletResponse response, String value) {
+        Cookie cookie = new Cookie(COOKIE_NAME, value);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setSecure(secure);
+        cookie.setMaxAge(COOKIE_EXPIRE_SECONDS);
+        response.addCookie(cookie);
+    }
+
+    private void deleteCookie(HttpServletRequest request, HttpServletResponse response) {
+        getCookie(request).ifPresent(cookie -> {
+            cookie.setValue("");
+            cookie.setPath("/");
+            cookie.setMaxAge(0);
+            response.addCookie(cookie);
+        });
+    }
+
+    private String serialize(OAuth2AuthorizationRequest authorizationRequest) {
+        return Base64.getUrlEncoder().encodeToString(SerializationUtils.serialize(authorizationRequest));
+    }
+
+    private OAuth2AuthorizationRequest deserialize(Cookie cookie) {
+        return (OAuth2AuthorizationRequest) SerializationUtils.deserialize(
+                Base64.getUrlDecoder().decode(cookie.getValue()));
+    }
+}

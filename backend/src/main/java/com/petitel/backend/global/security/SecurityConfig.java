@@ -2,6 +2,7 @@ package com.petitel.backend.global.security;
 
 import com.petitel.backend.global.security.jwt.JwtAuthenticationFilter;
 import com.petitel.backend.global.security.oauth2.CustomOAuth2UserService;
+import com.petitel.backend.global.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.petitel.backend.global.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +37,7 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ClientRegistrationRepository clientRegistrationRepository;
+    private final HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository;
 
     // 배포 환경에서는 CORS_ALLOWED_ORIGINS 환경변수로 실제 프론트 도메인을 넣는다. 여러 개면 콤마로 구분.
     @Value("${cors.allowed-origins:http://localhost:5173}")
@@ -60,9 +62,11 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        // 카카오 인가 요청을 커스터마이즈(prompt=login 등)하는 리졸버.
+                        // 카카오 인가 요청을 커스터마이즈(prompt=login 등)하는 리졸버 + 요청 상태를
+                        // 서버 세션 대신 쿠키에 저장하는 리포지토리(배포 환경 세션 유실 문제 회피).
                         .authorizationEndpoint(authorization -> authorization
-                                .authorizationRequestResolver(authorizationRequestResolver()))
+                                .authorizationRequestResolver(authorizationRequestResolver())
+                                .authorizationRequestRepository(cookieAuthorizationRequestRepository))
                         // 카카오에서 받은 프로필로 유저 조회/생성하는 서비스.
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         // 로그인 성공 시 JWT를 만들어 프론트로 리다이렉트하는 핸들러.
