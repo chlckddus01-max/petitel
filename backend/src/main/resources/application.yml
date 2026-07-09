@@ -54,6 +54,7 @@ app:
 
 logging:
   level:
-    # OAuth2 로그인 실패 원인이 기본 로그 레벨(INFO)에서는 안 보여서, 배포 트러블슈팅을 위해 올려둔다.
-    org.springframework.security.oauth2: DEBUG
+    # OAuth2 로그인 실패는 AbstractAuthenticationProcessingFilter가 TRACE로만 로그를 남겨서
+    # DEBUG로는 안 보인다. 배포 트러블슈팅을 위해 관련 패키지를 TRACE까지 올려둔다.
+    org.springframework.security: TRACE
     com.petitel.backend: DEBUG
