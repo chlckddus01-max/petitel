@@ -5,6 +5,14 @@ server:
   # 제대로 보내는 경우를 위해 켜두지만, 카카오 리다이렉트 URI 자체는 아래 app.backend-url로 직접 못박아서
   # 이 설정에 의존하지 않게 했다(플랫폼마다 프록시 헤더 처리가 달라 신뢰하기 어려움).
   forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        # Spring이 프록시 뒤에서 요청을 https로 인식 못 하면 세션 쿠키에 Secure를 안 붙이고,
+        # 그러면 브라우저가(SameSite=None과 조합될 때) 쿠키 자체를 버려서 카카오 로그인 콜백 때
+        # "authorization_request_not_found"로 실패한다. 배포 환경에서만 true로 명시적으로 강제한다.
+        secure: ${SESSION_COOKIE_SECURE:false}
+        same-site: lax
 
 spring:
   config:
