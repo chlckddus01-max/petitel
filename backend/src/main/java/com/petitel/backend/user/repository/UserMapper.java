@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Optional;
+import java.util.UUID;
 
 // SQL 없는 계약 인터페이스. 같은 namespace의 mapper/UserMapper.xml에 있는 SQL과 이름으로 연결되고,
 // MyBatis가 런타임에 구현체를 만들어 다른 빈(UserService 등)이 주입받아 쓸 수 있게 해준다.
@@ -21,4 +22,14 @@ public interface UserMapper {
                                                 @Param("providerId") String providerId);
 
     Optional<User> findByEmail(@Param("email") String email);
+
+    Optional<User> findById(@Param("userId") UUID userId);
+
+    void updateProfile(@Param("userId") UUID userId, @Param("name") String name, @Param("phone") String phone);
+
+    void updatePassword(@Param("userId") UUID userId, @Param("password") String password);
+
+    void updateMarketingAgreed(@Param("userId") UUID userId, @Param("marketingAgreed") boolean marketingAgreed);
+
+    void withdraw(@Param("userId") UUID userId);
 }

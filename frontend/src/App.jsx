@@ -6,6 +6,11 @@ import OAuthCallback from './pages/OAuthCallback'
 import Hotels from './pages/Hotels'
 import HotelDetail from './pages/HotelDetail'
 import MyPage from './pages/MyPage'
+import Pets from './pages/Pets'
+import Wishlist from './pages/Wishlist'
+import MyReviews from './pages/MyReviews'
+import ReviewWrite from './pages/ReviewWrite'
+import ProfileEdit from './pages/ProfileEdit'
 import ReservationNew from './pages/ReservationNew'
 import Reservations from './pages/Reservations'
 
@@ -20,6 +25,11 @@ export default function App() {
                 <Route path="/hotels" element={<Hotels />} />
                 <Route path="/hotels/:id" element={<HotelDetail />} />
                 <Route path="/mypage" element={<MyPage />} />
+                <Route path="/mypage/pets" element={<Pets />} />
+                <Route path="/mypage/wishlist" element={<Wishlist />} />
+                <Route path="/mypage/reviews" element={<MyReviews />} />
+                <Route path="/mypage/reviews/write" element={<ReviewWrite />} />
+                <Route path="/mypage/profile" element={<ProfileEdit />} />
                 <Route path="/reservations/new" element={<ReservationNew />} />
                 <Route path="/reservations" element={<Reservations />} />
             </Routes>

@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { DayPicker } from 'react-day-picker'
 import { ko } from 'react-day-picker/locale'
 import 'react-day-picker/style.css'
-import { getTokenPayload } from '../utils/auth'
+import { getTokenPayload, isLoggedIn, setPostLoginRedirect } from '../utils/auth'
+import { addToWishlist, fetchWishlistIds, removeFromWishlist } from '../utils/wishlist'
 
 const PET_TYPES = ['강아지', '고양이', '기타']
 const PAGE_SIZE = 6
@@ -56,6 +57,11 @@ export default function Hotels() {
             .catch(() => {})
     }, [])
 
+    useEffect(() => {
+        if (!isLoggedIn()) return
+        fetchWishlistIds().then(setWishlisted)
+    }, [])
+
     // 검색어/필터/페이지가 바뀔 때마다 서버에서 그 조건에 맞는 한 페이지 분량만 새로 받아온다.
     useEffect(() => {
         const params = new URLSearchParams()
@@ -96,10 +102,28 @@ export default function Hotels() {
     }
 
     function toggleWishlist(id) {
+        if (!isLoggedIn()) {
+            setPostLoginRedirect('/hotels')
+            navigate('/login')
+            return
+        }
+
+        const wasWishlisted = wishlisted.has(id)
+        // 낙관적으로 먼저 화면을 바꾸고, API가 실패하면 되돌린다.
         setWishlisted((prev) => {
             const next = new Set(prev)
-            next.has(id) ? next.delete(id) : next.add(id)
+            wasWishlisted ? next.delete(id) : next.add(id)
             return next
+        })
+
+        const request = wasWishlisted ? removeFromWishlist(id) : addToWishlist(id)
+        request.then((res) => {
+            if (res.ok) return
+            setWishlisted((prev) => {
+                const next = new Set(prev)
+                wasWishlisted ? next.add(id) : next.delete(id)
+                return next
+            })
         })
     }
 

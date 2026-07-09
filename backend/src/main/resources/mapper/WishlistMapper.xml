@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petitel.backend.wishlist.repository.WishlistMapper">
+
+    <select id="existsByUserIdAndHotelId" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM wishlists WHERE user_id = #{userId} AND hotel_id = #{hotelId}
+        )
+    </select>
+
+    <insert id="insert">
+        INSERT INTO wishlists (id, user_id, hotel_id, created_at)
+        VALUES (#{id}, #{userId}, #{hotelId}, now())
+    </insert>
+
+    <delete id="deleteByUserIdAndHotelId">
+        DELETE FROM wishlists
+        WHERE user_id = #{userId} AND hotel_id = #{hotelId}
+    </delete>
+
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM wishlists WHERE user_id = #{userId}
+    </select>
+
+    <select id="findHotelSummariesByUserId" resultType="com.petitel.backend.hotel.dto.HotelSummaryResponse">
+        SELECT
+            h.id AS id,
+            h.name AS name,
+            h.address AS address,
+            COALESCE((SELECT AVG(rv.rating) FROM reviews rv WHERE rv.hotel_id = h.id), 0) AS rating,
+            (SELECT COUNT(*) FROM reviews rv WHERE rv.hotel_id = h.id) AS review_count,
+            (SELECT MIN(r.price_per_night) FROM rooms r WHERE r.hotel_id = h.id AND r.status = 'SALE') AS price_per_night,
+            (SELECT hi.image_url FROM hotel_images hi WHERE hi.hotel_id = h.id ORDER BY hi.sort_order LIMIT 1) AS image
+        FROM wishlists w
+        JOIN hotels h ON h.id = w.hotel_id
+        WHERE w.user_id = #{userId}
+        ORDER BY w.created_at DESC
+    </select>
+
+</mapper>

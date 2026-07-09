@@ -57,4 +57,51 @@
         </foreach>
     </select>
 
+    <select id="findByIdAndUserId" resultType="com.petitel.backend.reservation.repository.ReservationOwnershipRow">
+        SELECT id AS id, hotel_id AS hotelId, status AS status, check_out AS checkOut
+        FROM reservations
+        WHERE id = #{reservationId} AND user_id = #{userId}
+    </select>
+
+    <!-- "예정된 예약" = 아직 취소/거절되지 않았고 체크아웃이 지나지 않은 건. -->
+    <select id="countUpcoming" resultType="int">
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE user_id = #{userId}
+          AND status IN ('PENDING', 'CONFIRMED')
+          AND check_out &gt;= #{today}
+    </select>
+
+    <!-- "이용완료" = CONFIRMED 상태이면서 체크아웃일이 지난 건(설계서 정의, 별도 COMPLETED 배치 없음). -->
+    <select id="countCompleted" resultType="int">
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE user_id = #{userId}
+          AND status = 'CONFIRMED'
+          AND check_out &lt; #{today}
+    </select>
+
+    <select id="findNextUpcoming" resultType="com.petitel.backend.reservation.dto.ReservationResponse">
+        SELECT
+            res.id AS id,
+            h.id AS hotelId,
+            h.name AS hotelName,
+            r.name AS roomName,
+            res.check_in AS checkIn,
+            res.check_out AS checkOut,
+            (res.check_out - res.check_in) AS nights,
+            res.total_price AS totalPrice,
+            res.status AS status,
+            res.request_note AS requestNote,
+            res.created_at AS createdAt
+        FROM reservations res
+        JOIN hotels h ON h.id = res.hotel_id
+        JOIN rooms r ON r.id = res.room_id
+        WHERE res.user_id = #{userId}
+          AND res.status IN ('PENDING', 'CONFIRMED')
+          AND res.check_out &gt;= #{today}
+        ORDER BY res.check_in ASC
+        LIMIT 1
+    </select>
+
 </mapper>

@@ -3,8 +3,6 @@ package com.petitel.backend.global.security.oauth2;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
@@ -14,7 +12,6 @@ import org.springframework.util.SerializationUtils;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.zip.GZIPInputStream;
@@ -28,8 +25,6 @@ import java.util.zip.GZIPOutputStream;
 public class HttpCookieOAuth2AuthorizationRequestRepository
         implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
 
-    private static final Logger log = LoggerFactory.getLogger(HttpCookieOAuth2AuthorizationRequestRepository.class);
-
     private static final String COOKIE_NAME = "oauth2_auth_request";
     private static final int COOKIE_EXPIRE_SECONDS = 180;
 
@@ -39,23 +34,11 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
 
     @Override
     public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
-        // 원인 파악용 임시 로그: 이 요청에 실제로 어떤 쿠키가 들어왔는지, 우리 쿠키를 찾았는지 그대로 남긴다.
-        String cookieNames = request.getCookies() == null
-                ? "(no cookies at all)"
-                : Arrays.toString(Arrays.stream(request.getCookies()).map(Cookie::getName).toArray());
-        log.info("[oauth2-debug] loadAuthorizationRequest uri={} incoming cookies={}", request.getRequestURI(), cookieNames);
-
         Optional<Cookie> cookie = getCookie(request);
-        if (cookie.isEmpty()) {
-            log.info("[oauth2-debug] {} cookie NOT found", COOKIE_NAME);
-            return null;
-        }
+        if (cookie.isEmpty()) return null;
         try {
-            OAuth2AuthorizationRequest result = deserialize(cookie.get());
-            log.info("[oauth2-debug] {} cookie found and deserialized OK", COOKIE_NAME);
-            return result;
+            return deserialize(cookie.get());
         } catch (Exception e) {
-            log.error("[oauth2-debug] failed to deserialize {} cookie", COOKIE_NAME, e);
             return null;
         }
     }
@@ -64,18 +47,14 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
     public void saveAuthorizationRequest(OAuth2AuthorizationRequest authorizationRequest,
                                           HttpServletRequest request, HttpServletResponse response) {
         if (authorizationRequest == null) {
-            log.info("[oauth2-debug] saveAuthorizationRequest called with null -> deleting cookie");
             deleteCookie(request, response);
             return;
         }
-        String value = serialize(authorizationRequest);
-        log.info("[oauth2-debug] saveAuthorizationRequest uri={} cookieValueLength={}", request.getRequestURI(), value.length());
-        addCookie(response, value);
+        addCookie(response, serialize(authorizationRequest));
     }
 
     @Override
     public OAuth2AuthorizationRequest removeAuthorizationRequest(HttpServletRequest request, HttpServletResponse response) {
-        log.info("[oauth2-debug] removeAuthorizationRequest uri={}", request.getRequestURI());
         OAuth2AuthorizationRequest authorizationRequest = loadAuthorizationRequest(request);
         deleteCookie(request, response);
         return authorizationRequest;

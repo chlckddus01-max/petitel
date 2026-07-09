@@ -9,13 +9,16 @@ import com.petitel.backend.reservation.dto.ReservationCreateRequest;
 import com.petitel.backend.reservation.dto.ReservationResponse;
 import com.petitel.backend.reservation.repository.ReservationMapper;
 import com.petitel.backend.reservation.repository.ReservationPetNameRow;
+import com.petitel.backend.review.repository.ReviewMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -26,6 +29,7 @@ public class ReservationService {
     private final ReservationMapper reservationMapper;
     private final HotelMapper hotelMapper;
     private final PetMapper petMapper;
+    private final ReviewMapper reviewMapper;
 
     // 여러 INSERT(예약 1건 + reservation_pets N건)가 하나로 묶여야 하므로 트랜잭션으로 감싼다.
     @Transactional
@@ -79,7 +83,14 @@ public class ReservationService {
     public List<ReservationResponse> getMyReservations(UUID userId) {
         List<ReservationResponse> reservations = reservationMapper.findByUserId(userId);
         attachPetNames(reservations);
+        attachHasReview(userId, reservations);
         return reservations;
+    }
+
+    private void attachHasReview(UUID userId, List<ReservationResponse> reservations) {
+        if (reservations.isEmpty()) return;
+        Set<UUID> reviewedIds = new HashSet<>(reviewMapper.findReviewedReservationIdsByUserId(userId));
+        reservations.forEach(r -> r.setHasReview(reviewedIds.contains(r.getId())));
     }
 
     private void attachPetNames(List<ReservationResponse> reservations) {

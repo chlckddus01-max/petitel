@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getTokenPayload } from '../utils/auth'
+import { getTokenPayload, isLoggedIn, setPostLoginRedirect } from '../utils/auth'
+import { addToWishlist, fetchWishlistIds, removeFromWishlist } from '../utils/wishlist'
 
 export default function Home() {
 
     const navigate = useNavigate()
     const user = getTokenPayload()
     const [recommendedHotels, setRecommendedHotels] = useState([])
+    const [wishlisted, setWishlisted] = useState(new Set())
 
     const goToSearch = () => {
         navigate('/hotels')
@@ -22,6 +24,36 @@ export default function Home() {
             .catch(() => {})
     }, [])
 
+    useEffect(() => {
+        if (!isLoggedIn()) return
+        fetchWishlistIds().then(setWishlisted)
+    }, [])
+
+    function toggleWishlist(id) {
+        if (!isLoggedIn()) {
+            setPostLoginRedirect('/')
+            navigate('/login')
+            return
+        }
+
+        const wasWishlisted = wishlisted.has(id)
+        setWishlisted((prev) => {
+            const next = new Set(prev)
+            wasWishlisted ? next.delete(id) : next.add(id)
+            return next
+        })
+
+        const request = wasWishlisted ? removeFromWishlist(id) : addToWishlist(id)
+        request.then((res) => {
+            if (res.ok) return
+            setWishlisted((prev) => {
+                const next = new Set(prev)
+                wasWishlisted ? next.add(id) : next.delete(id)
+                return next
+            })
+        })
+    }
+
     return (
         <div className="bg-slate-50 text-slate-800 antialiased">
             <nav className="fixed top-0 z-50 w-full bg-white/80 backdrop-blur-md shadow-sm">
@@ -35,7 +67,7 @@ export default function Home() {
 
                     <div className="hidden items-center gap-8 md:flex">
                         <a
-                            className="border-b-2 border-blue-600 pb-1 text-sm font-bold text-blue-600"
+                            className="text-sm font-medium text-slate-600 transition-opacity duration-200 hover:text-blue-500 active:scale-95"
                             href="#"
                             onClick={(e) => { e.preventDefault(); navigate('/hotels') }}
                         >
@@ -259,10 +291,15 @@ export default function Home() {
                                     </div>
                                     <button
                                         className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-700 backdrop-blur-md transition-colors hover:text-blue-600"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => { e.stopPropagation(); toggleWishlist(hotel.id) }}
                                         aria-label="찜하기"
                                     >
-                                        <span className="material-symbols-outlined text-lg">favorite_border</span>
+                                        <span
+                                            className={wishlisted.has(hotel.id) ? "material-symbols-outlined text-lg text-red-500" : "material-symbols-outlined text-lg"}
+                                            style={wishlisted.has(hotel.id) ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                                        >
+                                            favorite
+                                        </span>
                                     </button>
                                 </div>
                                 <div className="p-6">

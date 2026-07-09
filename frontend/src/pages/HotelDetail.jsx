@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { isLoggedIn, setPostLoginRedirect } from '../utils/auth'
+import { addToWishlist, fetchWishlistIds, removeFromWishlist } from '../utils/wishlist'
 import ConfirmModal from '../components/ConfirmModal'
 
 const SWIPE_THRESHOLD_PX = 40
@@ -30,6 +31,27 @@ export default function HotelDetail() {
             .catch(() => setNotFound(true))
             .finally(() => setLoading(false))
     }, [id])
+
+    useEffect(() => {
+        if (!isLoggedIn()) return
+        fetchWishlistIds().then((ids) => setWishlisted(ids.has(id)))
+    }, [id])
+
+    function toggleWishlist() {
+        if (!isLoggedIn()) {
+            setPostLoginRedirect(`/hotels/${id}`)
+            navigate('/login')
+            return
+        }
+
+        const wasWishlisted = wishlisted
+        setWishlisted(!wasWishlisted)
+
+        const request = wasWishlisted ? removeFromWishlist(id) : addToWishlist(id)
+        request.then((res) => {
+            if (!res.ok) setWishlisted(wasWishlisted)
+        })
+    }
 
     if (loading) {
         return (
@@ -109,7 +131,7 @@ export default function HotelDetail() {
                     </button>
                     <button
                         className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-sm"
-                        onClick={() => setWishlisted((prev) => !prev)}
+                        onClick={toggleWishlist}
                     >
                         <span
                             className={

@@ -30,6 +30,14 @@ export function getTokenPayload() {
     }
 }
 
+// 로그아웃 + 다음 카카오 로그인은 자동 재로그인 없이 동의 화면부터 다시 보여주기 위한 플래그.
+// Home.jsx/Hotels.jsx GNB의 로그아웃 버튼과 동일 동작을 마이페이지 사이드바에서도 재사용한다.
+export function logout() {
+    localStorage.removeItem('accessToken')
+    localStorage.setItem('kakao_force_login', 'true')
+    window.location.href = '/'
+}
+
 // accessToken을 Authorization 헤더에 자동으로 실어주는 fetch. 로그인 필요한 API(반려동물, 예약 등)에서 공용으로 쓴다.
 export function authFetch(url, options = {}) {
     const token = localStorage.getItem('accessToken')
