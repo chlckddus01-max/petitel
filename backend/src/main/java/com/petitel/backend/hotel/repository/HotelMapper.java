@@ -41,5 +41,9 @@ public interface HotelMapper {
     // 예약 생성 시 가격/최대동반마리수/판매상태를 서버가 직접 확인하기 위한 단건 조회 (클라이언트 값을 신뢰하지 않음).
     Optional<RoomBookingInfo> findRoomById(@Param("roomId") UUID roomId);
 
-    List<ReviewResponse> findReviewsByHotelId(@Param("hotelId") UUID hotelId);
+    // 호텔 상세 화면의 "최근 리뷰 3건 미리보기"용 (설계서 04번 화면 정의).
+    List<ReviewResponse> findRecentReviewsByHotelId(@Param("hotelId") UUID hotelId, @Param("limit") int limit);
+
+    // "전체보기" 클릭 시 개수 제한 없이 전부 조회.
+    List<ReviewResponse> findAllReviewsByHotelId(@Param("hotelId") UUID hotelId);
 }

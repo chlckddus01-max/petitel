@@ -49,7 +49,12 @@ export default function MyReviews() {
                         {reviews.map((review) => (
                             <div key={review.id} className="rounded-2xl bg-white p-5 shadow-sm">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="font-bold text-slate-900">{review.hotelName}</h3>
+                                    <h3
+                                        className="cursor-pointer font-bold text-slate-900 hover:underline"
+                                        onClick={() => navigate(`/hotels/${review.hotelId}`)}
+                                    >
+                                        {review.hotelName}
+                                    </h3>
                                     <span className="flex items-center gap-1 text-sm font-bold text-amber-500">
                                         <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                                         {review.rating}

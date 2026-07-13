@@ -17,6 +17,9 @@ export default function HotelDetail() {
     const [showLoginModal, setShowLoginModal] = useState(false)
     const [activeImage, setActiveImage] = useState(0)
     const touchStartX = useRef(null)
+    // 상세 화면은 최근 3건만 미리 받아오고, "전체보기" 눌렀을 때만 전체 리뷰를 따로 불러온다.
+    const [allReviews, setAllReviews] = useState(null)
+    const [loadingAllReviews, setLoadingAllReviews] = useState(false)
 
     useEffect(() => {
         fetch(`/api/hotels/${id}`)
@@ -236,15 +239,26 @@ export default function HotelDetail() {
 
                 <section className="mt-10">
                     <div className="flex items-end justify-between">
-                        <h2 className="text-xl font-bold text-slate-900">최근 리뷰</h2>
-                        <button className="flex items-center gap-1 text-sm font-bold text-blue-600">
-                            전체보기
-                            <span className="material-symbols-outlined text-base">chevron_right</span>
-                        </button>
+                        <h2 className="text-xl font-bold text-slate-900">{allReviews ? '전체 리뷰' : '최근 리뷰'}</h2>
+                        {!allReviews && hotel.reviewCount > hotel.reviews.length && (
+                            <button
+                                className="flex items-center gap-1 text-sm font-bold text-blue-600"
+                                onClick={() => {
+                                    setLoadingAllReviews(true)
+                                    fetch(`/api/hotels/${id}/reviews`)
+                                        .then((res) => res.json())
+                                        .then(setAllReviews)
+                                        .finally(() => setLoadingAllReviews(false))
+                                }}
+                            >
+                                {loadingAllReviews ? '불러오는 중...' : '전체보기'}
+                                <span className="material-symbols-outlined text-base">chevron_right</span>
+                            </button>
+                        )}
                     </div>
 
                     <div className="mt-4 space-y-3">
-                        {hotel.reviews.map((review, idx) => (
+                        {(allReviews || hotel.reviews).map((review, idx) => (
                             <div key={idx} className="rounded-2xl bg-slate-50 p-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">

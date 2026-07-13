@@ -4,6 +4,7 @@ import com.petitel.backend.hotel.dto.FacilityResponse;
 import com.petitel.backend.hotel.dto.HotelDetailResponse;
 import com.petitel.backend.hotel.dto.HotelPageResponse;
 import com.petitel.backend.hotel.dto.HotelSummaryResponse;
+import com.petitel.backend.hotel.dto.ReviewResponse;
 import com.petitel.backend.hotel.repository.HotelFacilityTagRow;
 import com.petitel.backend.hotel.repository.HotelMapper;
 import lombok.RequiredArgsConstructor;
@@ -55,13 +56,19 @@ public class HotelService {
         return hotelMapper.findAllFacilities();
     }
 
+    private static final int REVIEW_PREVIEW_COUNT = 3;
+
     public HotelDetailResponse getHotelDetail(UUID hotelId) {
         HotelDetailResponse hotel = hotelMapper.findDetailById(hotelId)
                 .orElseThrow(() -> new IllegalArgumentException("호텔을 찾을 수 없습니다."));
         hotel.setImages(hotelMapper.findImageUrlsByHotelId(hotelId));
         hotel.setFacilities(hotelMapper.findFacilitiesByHotelId(hotelId));
         hotel.setRooms(hotelMapper.findRoomsByHotelId(hotelId));
-        hotel.setReviews(hotelMapper.findReviewsByHotelId(hotelId));
+        hotel.setReviews(hotelMapper.findRecentReviewsByHotelId(hotelId, REVIEW_PREVIEW_COUNT));
         return hotel;
+    }
+
+    public List<ReviewResponse> getAllReviews(UUID hotelId) {
+        return hotelMapper.findAllReviewsByHotelId(hotelId);
     }
 }

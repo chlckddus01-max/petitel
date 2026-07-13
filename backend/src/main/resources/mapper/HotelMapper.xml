@@ -116,7 +116,7 @@
     </select>
 
     <!-- 리뷰 작성자 이름은 개인정보라서 "김*지"처럼 앞/뒤 글자만 남기고 마스킹해서 내려준다. -->
-    <select id="findReviewsByHotelId" resultType="com.petitel.backend.hotel.dto.ReviewResponse">
+    <sql id="reviewSelect">
         SELECT
             CASE
                 WHEN length(u.name) &lt;= 1 THEN u.name
@@ -128,6 +128,15 @@
         JOIN users u ON u.id = rv.user_id
         WHERE rv.hotel_id = #{hotelId}
         ORDER BY rv.created_at DESC
+    </sql>
+
+    <select id="findRecentReviewsByHotelId" resultType="com.petitel.backend.hotel.dto.ReviewResponse">
+        <include refid="reviewSelect"/>
+        LIMIT #{limit}
+    </select>
+
+    <select id="findAllReviewsByHotelId" resultType="com.petitel.backend.hotel.dto.ReviewResponse">
+        <include refid="reviewSelect"/>
     </select>
 
 </mapper>

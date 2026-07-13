@@ -3,6 +3,7 @@ package com.petitel.backend.hotel.controller;
 import com.petitel.backend.hotel.dto.FacilityResponse;
 import com.petitel.backend.hotel.dto.HotelDetailResponse;
 import com.petitel.backend.hotel.dto.HotelPageResponse;
+import com.petitel.backend.hotel.dto.ReviewResponse;
 import com.petitel.backend.hotel.service.HotelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,5 +41,10 @@ public class HotelController {
     @GetMapping("/{hotelId}")
     public HotelDetailResponse getHotelDetail(@PathVariable UUID hotelId) {
         return hotelService.getHotelDetail(hotelId);
+    }
+
+    @GetMapping("/{hotelId}/reviews")
+    public List<ReviewResponse> getAllReviews(@PathVariable UUID hotelId) {
+        return hotelService.getAllReviews(hotelId);
     }
 }
