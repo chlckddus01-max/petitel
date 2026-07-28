@@ -182,6 +182,7 @@ export default function Signup() {
                                         placeholder="010-0000-0000"
                                         value={form.phone}
                                         onChange={handleChange}
+                                        required
                                     />
                                     <button
                                         className="shrink-0 rounded-xl bg-blue-50 px-4 text-sm font-bold text-blue-600 transition-colors hover:bg-blue-100"

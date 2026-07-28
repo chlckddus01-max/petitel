@@ -39,6 +39,9 @@ export function logout() {
 }
 
 // accessToken을 Authorization 헤더에 자동으로 실어주는 fetch. 로그인 필요한 API(반려동물, 예약 등)에서 공용으로 쓴다.
+// 서버가 401(토큰 없음/만료)을 주면 isLoggedIn()은 여전히 true인 채로(토큰이 localStorage에 남아있으니까)
+// 각 페이지가 그냥 "불러오기 실패"만 띄우는 반쪽 로그인 상태가 되는 문제가 있었다. 여기서 401을 가로채
+// 토큰을 지우고 로그인 페이지로 보내, 세션이 끊기면 실제로 로그아웃되도록 통일한다.
 export function authFetch(url, options = {}) {
     const token = localStorage.getItem('accessToken')
     return fetch(url, {
@@ -47,5 +50,13 @@ export function authFetch(url, options = {}) {
             ...(options.headers || {}),
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
+    }).then((res) => {
+        if (res.status === 401) {
+            localStorage.removeItem('accessToken')
+            setPostLoginRedirect(window.location.pathname + window.location.search)
+            window.location.href = '/login'
+            return new Promise(() => {})
+        }
+        return res
     })
 }

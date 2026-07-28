@@ -40,6 +40,7 @@ export default function ReservationNew() {
     const [requestNote, setRequestNote] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState(null)
+    const [notFound, setNotFound] = useState(false)
     const calendarRef = useRef(null)
 
     useEffect(() => {
@@ -54,15 +55,27 @@ export default function ReservationNew() {
         }
 
         Promise.all([
-            fetch(`/api/hotels/${hotelId}`).then((res) => res.json()),
-            authFetch('/api/pets').then((res) => res.json()),
+            fetch(`/api/hotels/${hotelId}`).then((res) => {
+                if (!res.ok) throw { notFound: true }
+                return res.json()
+            }),
+            authFetch('/api/pets').then((res) => {
+                if (!res.ok) throw new Error('pets fetch failed')
+                return res.json()
+            }),
         ])
             .then(([hotelData, petsData]) => {
                 setHotel(hotelData)
                 setPets(petsData)
                 if (hotelData.rooms?.length > 0) setSelectedRoomId(hotelData.rooms[0].id)
             })
-            .catch(() => setError('예약 정보를 불러오지 못했습니다.'))
+            .catch((err) => {
+                if (err?.notFound) {
+                    setNotFound(true)
+                    return
+                }
+                setError('예약 정보를 불러오지 못했습니다.')
+            })
             .finally(() => setLoading(false))
     }, [hotelId, navigate])
 
@@ -131,10 +144,24 @@ export default function ReservationNew() {
         )
     }
 
-    if (!hotel) {
+    if (notFound) {
         return (
             <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white text-slate-800">
                 <p className="text-lg font-bold">호텔을 찾을 수 없습니다.</p>
+                <button
+                    className="rounded-full bg-blue-600 px-6 py-2.5 text-sm font-bold text-white"
+                    onClick={() => navigate('/hotels')}
+                >
+                    호텔 목록으로
+                </button>
+            </div>
+        )
+    }
+
+    if (!hotel) {
+        return (
+            <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white text-slate-800">
+                <p className="text-sm text-slate-500">{error || '예약 정보를 불러오지 못했습니다.'}</p>
                 <button
                     className="rounded-full bg-blue-600 px-6 py-2.5 text-sm font-bold text-white"
                     onClick={() => navigate('/hotels')}
